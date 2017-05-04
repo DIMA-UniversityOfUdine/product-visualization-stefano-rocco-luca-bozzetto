@@ -9,8 +9,8 @@ a {
 }
 #men {
     position: relative;
-    left: 100px;
-    top: 100px;
+    left: 100px;           /*Modificare se si vuole spostare orizzontalmente l'intero menù*/
+    top: 100px;            /*Modificare se si vuole spostare verticalmente l'intero menù*/
 }
 #uno {
     width: 30px;
@@ -23,8 +23,8 @@ a {
     width: 100px;
     background-color: black;
     padding: 0px;
-    top: 0px;              /*Modificare se si vuole spostare verticalmente il menù a comparsa*/
-    left: 0px;             /*Modificare se si vuole spostare orizzontalmente il menù a comparsa*/
+    top: 0px;              /*Modificare se si vuole spostare verticalmente il menù a comparsa rispetto all'icona*/
+    left: 0px;             /*Modificare se si vuole spostare orizzontalmente il menù a comparsa rispetto all'icona*/
 }
 img {
     width: 30px;
