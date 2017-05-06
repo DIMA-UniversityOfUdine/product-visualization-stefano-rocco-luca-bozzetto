@@ -9,7 +9,10 @@ li {
     background-color: black;
     color: white;
     padding: 10px;
-    
+    opacity: 0.4;
+}
+li:hover {
+    opacity: 1.0;
 }
 #uno {
     width: 150px;
