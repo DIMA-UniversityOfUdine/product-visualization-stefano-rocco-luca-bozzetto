@@ -3,22 +3,71 @@
     
     <head>
        <title>Progetto</title>
-        <link rel="stylesheet" type="text/css" href="progetto.css">
+        <link rel="stylesheet" type="text/css" href="Menu.css">
     </head>
     
     <body> 
         <div id="men">        <!--Contenitore menù-->            
             <ul id="uno">
-                <li><img src="mmenu.jpg"></li>    <!--Icona menù-->
-                <ul id="due">
-                    <li><a href="">Propriet&agrave; 1</a></li>   <!--Scelte-->
-                    <li><a href="">Propriet&agrave; 2</a></li>
-                </ul>
+                <li>Property:  <!--Property that will change-->
+                    <select>
+                        <option value="prop1">Prop1</option>  <!--Choices for the property-->
+                        <option value="prop2">Prop2</option>
+                        <option value="prop3">Prop3</option>
+                    </select>
+                </li>
+            </ul>
+            
+            <ul id="due">
+                <li>SecProperty:  <!--Property that will change-->
+                    <select>
+                        <option value="prop1">SecProp1</option>  <!--Choices for the property-->
+                        <option value="prop2">SecProp2</option>
+                    </select>
+                </li>
             </ul>
         </div>
         
        
-    </body>
     
-</html>
-                                                    
+    
+        <script>
+            
+            initGui();
+            
+            // Init gui
+            function initGui() {
+				    var gui = new dat.GUI();
+				    gui.add( params, 'Property', [ 'Prop1', 'Prop2', 'Prop3' ] );  //Choices for the property
+                    gui.add( params, 'SecProperty', [ 'SecProp1', 'SecProp2' ] );  //Choices for the property
+            }
+            
+            function animate() {
+                render();
+            }
+            
+            function render() {
+                if ( mesh ) {
+					var property = mesh.property;
+					switch ( params.property ) {             //Selects the property that the user wants
+						case 'Prop1': property = property1; break;
+						case 'Prop2': property = property2; break;
+						case 'Prop3': property = property3; break;
+				    }
+                
+                }
+                
+                if ( mesh ) {
+					var secproperty = mesh.secproperty;
+					switch ( params.secproperty ) {             //Selects the property that the user wants
+						case 'SecProp1': secproperty = secproperty1; break;
+						case 'SecProp2': secproperty = secproperty2; break;						
+				    }
+                
+                }
+                mesh.property = property;
+            }
+        </script>
+    
+    </body>
+</html>                                         
