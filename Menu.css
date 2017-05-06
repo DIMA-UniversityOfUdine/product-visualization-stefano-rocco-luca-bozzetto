@@ -1,40 +1,21 @@
 ul {
     list-style: none;
 }
-a {
-    padding: 10px;
-    text-decoration: none;
-    display: block;
-    color: white;
-}
-#men {
-    position: relative;
-    left: 100px;           /*Modificare se si vuole spostare orizzontalmente l'intero menù*/
-    top: 100px;            /*Modificare se si vuole spostare verticalmente l'intero menù*/
-}
-#uno {
-    width: 30px;
-    height: 30px;
-    padding: 0px;
-}
-#due {
-    position: relative;
-    visibility: hidden;
-    width: 100px;
-    background-color: black;
-    padding: 0px;
-    top: 0px;              /*Modificare se si vuole spostare verticalmente il menù a comparsa rispetto all'icona*/
-    left: 0px;             /*Modificare se si vuole spostare orizzontalmente il menù a comparsa rispetto all'icona*/
-}
 img {
     width: 30px;
     height: 30px;
 }
-
-#uno:hover #due {                   /*Mostra il menù corrispondene*/
-    display: block;
-    visibility: visible;
+li {
+    background-color: black;
+    color: white;
+    padding: 10px;
+    
 }
-a:hover {
-    background-color: grey;
+#uno {
+    width: 150px;
+}
+#due {
+    position: relative;
+    left: 400px;
+    width: 190px;
 }
