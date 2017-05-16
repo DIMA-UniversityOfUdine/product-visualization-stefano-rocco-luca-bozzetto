@@ -1,24 +1,69 @@
 ul {
     list-style: none;
 }
-img {
-    width: 30px;
-    height: 30px;
-}
+
 li {
     background-color: black;
     color: white;
+    text-align: center;
     padding: 10px;
     opacity: 0.4;
 }
 li:hover {
     opacity: 1.0;
 }
+
 #uno {
-    width: 150px;
+    float: left;
+    width: 130.5px;
 }
+
 #due {
+    float: left;
+    width: 130.5px;
+}
+.prova {
     position: relative;
-    left: 400px;
-    width: 190px;
+    height: 20px;
+}
+
+#men {
+    position: fixed;
+    bottom: 0px;
+    width: 100%;
+}
+
+.hidden  {
+    position: relative;
+    visibility: hidden;
+    bottom: 131px;
+    left: -50px;
+    width: 130px;
+}
+
+#uno:hover .hidden {
+    visibility: visible;
+}
+
+#due:hover .hidden {
+    visibility: visible;
+}
+
+img {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 10%;
+}
+
+button {
+    border-style: none;
+    top: -97.5px;
+    background-color: black;
+    color: white;
+    opacity: 0.4;
+    padding: 4px;
+}
+button:hover {
+    opacity: 1.0;
 }
