@@ -1,0 +1,88 @@
+@font-face {
+    font-family: "DejaVu Sans Light";
+    src: url("DejaVuSans-ExtraLight.ttf") format("truetype");
+}
+
+ul {
+    list-style: none;
+    margin: 0px;
+    padding: 0px;
+}
+
+li {
+    background-color: rgba(255, 255, 255, 0.4);
+    color: black; 
+    font-family: "DejaVu Sans Light";
+    text-align: center;
+    /* padding: 10px; */
+}
+
+li:hover, #button_inner_active {
+    background-color: rgba(255, 255, 255, 1);
+    color: black;
+    opacity: 1;
+}
+
+li:hover .button_outer_text {
+    opacity: 1;
+}
+
+.menu_hidden li:hover .button_inner_text {
+    opacity: 1;
+}
+
+.button_outer_text {
+    display: inline-block;
+    font-size: 20;
+    line-height: 80px;
+    opacity: 0.7;
+    transform: scale(1, 1.1);
+    -webkit-transform: scale(1, 1.1); /* Safari and Chrome */
+    -moz-transform: scale(1, 1.1); /* Firefox */
+    -ms-transform: scale(1, 1.1); /* IE 9+ */
+    -o-transform: scale(1, 1.1); /* Opera */
+    vertical-align: middle;
+}
+
+.button_inner_text {
+    display: inherit;
+    font-size: 16px;
+    line-height: 80px;
+    opacity: 0.7;
+    transform: inherit;
+    vertical-align: inherit;
+}
+
+.button {
+    background-color: rgba(255, 255, 255, 0);
+    float: left;
+}
+
+.button:hover .menu_hidden li {
+    visibility: visible;
+}
+
+.button, .menu_hidden li {
+    height: 80px;
+    width: 200px;
+}
+
+.menu_hidden li {
+    bottom: 80px;
+    cursor: pointer;
+    position: relative;
+    visibility: hidden;
+}
+
+.menu_hidden {
+    bottom: 0px;
+    position: fixed;
+    visibility: hidden;
+}
+
+#menu {
+    background-color: rgba(255, 255, 255, 0.4);
+    bottom: 0px;
+    position: fixed;
+    width: 100%;
+}

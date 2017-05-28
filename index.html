@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Project 2</title>
+		<link rel="stylesheet" type="text/css" href="Menu.css">
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				background-color: #f0f0f0;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			a {
+				color: #000;
+				text-decoration: none;
+			}
+
+			a:hover {
+				color: #0080ff;
+			}
+		</style>
+	</head>
+	<body>
+
+		<div id="menu">
+			<ul id="button_1">
+				<li class="button">
+					<div style="position: relative">
+						<!-- <img src="test.png" style="position: absolute; left: 0px"/> -->
+						<span class="button_outer_text">MATERIAL</span>
+					</div>
+					<ul id="menu_1" class="menu_hidden">
+						<li id="button_inner_active" onclick="select_element(this); changeMaterial(1);">
+							<span class="button_inner_text">SNOW_DIGITAL</span>
+						</li>
+						<li id="button_inner_inactive" onclick="select_element(this); changeMaterial(2)">
+							<span class="button_inner_text">NAVY_BLOTCHED</span>
+						</li>
+						<li id="button_inner_inactive" onclick="select_element(this); changeMaterial(3)">
+							<span class="button_inner_text">AUTUMN_FRECKLED</span>
+						</li>
+					</ul>
+				</li>
+				<li class="button">
+					<span class="button_outer_text">PROPERTIES</span>
+					<ul id="menu_2" class="menu_hidden">
+						<li></li>
+						<li></li>
+						<li></li>
+					</ul>
+				</li>
+				<li class="button" style="float: right">
+					<span class="button_outer_text">BUY</span>
+				</li>
+			</ul>
+		</div>
+
+		<script>
+			function select_element(elem) {
+				var menu_selected = elem.parentNode;
+				//if (menu_selected.id ... )
+				menu_selected.querySelector('#button_inner_active').id = 'button_inner_inactive';
+				elem.id = 'button_inner_active';
+			}
+		</script>
+
+		<script src="lib/three.min.js"></script>
+		<script src='lib/OBJLoader.js'></script>
+
+		<!-- shaders -->
+
+		<script type="text/x-glsl" id="vertex">
+		varying vec3 vNormal;
+		varying vec3 vPosition;
+		varying vec3 wPosition;
+		varying vec2 vUv;
+
+		void main() {
+			vec4 vPos = modelViewMatrix * vec4(position, 1.0);
+			vPosition = vPos.xyz;
+			wPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+			vNormal = normalMatrix * normal;
+			vUv = uv;
+			gl_Position = projectionMatrix * vPos;
+		}
+		</script>
+
+		<script type="text/x-glsl" id="fragment">
+			varying vec3 vNormal;
+			varying vec3 vPosition;
+			varying vec3 wPosition;
+			varying vec2 vUv;
+			uniform vec3 pointLightPosition; // in world space
+			uniform vec3 clight;
+			uniform bool invertedNormals;
+
+			uniform sampler2D diffuseMap;
+			uniform sampler2D specularMap;
+			uniform sampler2D roughnessMap;
+			uniform sampler2D normalMap;
+			uniform sampler2D aoMap;
+			uniform samplerCube irradianceMap;
+			uniform samplerCube reflectionMap;
+			const float PI = 3.14159;
+
+			vec3 FSchlick(float lDoth) {
+				vec3 cspec = pow(texture2D(specularMap, vUv).xyz, vec3(2.2));
+				return (cspec + (vec3(1.0)-cspec)*pow(1.0 - lDoth, 5.0));
+			}
+
+			float DGGX(float nDoth, float alpha) {
+				float alpha2 = alpha*alpha;
+				float d = nDoth*nDoth*(alpha2-1.0)+1.0;
+				return ( alpha2 / (PI*d*d));
+			}
+
+			float G1(float dotProduct, float k) {
+				return (dotProduct / (dotProduct*(1.0-k) + k));
+			}
+
+			float GSmith(float nDotv, float nDotl, float roughness) {
+					float k = roughness*roughness;
+					return G1(nDotl, k)*G1(nDotv, k);
+			}
+
+			vec3 perturbNormal2Arb(vec3 eye_pos, vec3 surf_norm) {
+
+				vec3 q0 = dFdx(eye_pos.xyz);
+				vec3 q1 = dFdy(eye_pos.xyz);
+				vec2 st0 = dFdx(vUv.st);
+				vec2 st1 = dFdy(vUv.st);
+
+				vec3 S = normalize( q0 * st1.t - q1 * st0.t);
+				vec3 T = normalize(-q0 * st1.s + q1 * st0.s);
+				if (invertedNormals) {
+					S = -S;
+					T = -T;
+				}
+				vec3 N = surf_norm;
+
+				vec3 mapN = normalize(texture2D(normalMap, vUv).xyz * 2.0 - 1.0);
+				mat3 tsn = mat3(S, T, N);
+				return normalize(tsn * mapN);
+			}
+
+			void main() {
+				
+				vec4 lPosition = viewMatrix * vec4(pointLightPosition, 1.0);
+				vec3 l = normalize(lPosition.xyz - vPosition.xyz);
+				vec3 n = perturbNormal2Arb(vPosition, normalize(vNormal));
+				vec3 v = normalize(-vPosition);
+				vec3 h = normalize(v + l);
+
+				// small quantity to prevent divisions by 0
+				float nDotl = max(dot(n, l), 0.000001);
+				float lDoth = max(dot(l, h), 0.000001);
+				float nDoth = max(dot(n, h), 0.000001);
+				float vDoth = max(dot(v, h), 0.000001);
+				float nDotv = max(dot(n, v), 0.000001);
+				vec3 fresnel = FSchlick(lDoth);
+				vec3 cdiff = pow(texture2D(diffuseMap, vUv).xyz, vec3(2.2));
+				float roughness = texture2D(roughnessMap, vUv).x;
+				vec3 BRDF = (vec3(1.0)-fresnel) * cdiff / PI
+						  + fresnel 			* GSmith(nDotv, nDotl, roughness)
+						  						* DGGX(nDoth, roughness*roughness)
+						  						/ (4.0*nDotl*nDotv);
+
+				vec3 wN = normalize((vec4(n, 0.0) * viewMatrix).xyz);
+				vec3 wV = cameraPosition - wPosition;
+				vec3 r = reflect(-wV, wN);
+				vec3 environLight = pow(textureCubeLodEXT(reflectionMap, vec3(-r.x, r.yz), roughness * 10.0).xyz, vec3(2.2));
+				vec3 ambientLight = pow(textureCube(irradianceMap, wN).xyz, vec3(2.2));
+
+				vec3 outRadiance = (PI * clight * nDotl * BRDF)
+								 + (fresnel * environLight) 
+								 + (ambientLight * cdiff * texture2D(aoMap, vUv).xyz);
+				// gamma encode the final value
+				gl_FragColor = vec4(pow(outRadiance, vec3(1.0/2.2)), 1.0);
+			}
+		</script>
+
+		<script type="text/x-glsl" id="vertex_eye">
+			varying vec3 vPosition;
+			varying vec2 vUv;
+
+			void main() {
+				vec4 vPos = modelViewMatrix * vec4(position, 1.0);
+				vPosition = vPos.xyz;
+				vUv = uv;
+				gl_Position = projectionMatrix * vPos;
+			}
+		</script>
+
+		<script type="text/x-glsl" id="fragment_eye">
+			precision highp float;
+			precision highp int;
+
+			uniform float random;
+			uniform sampler2D texture;
+			uniform float time;
+
+			varying vec3 vPosition;
+			varying vec3 vNormal;
+			varying vec2 vUv;
+
+			void main() {
+
+				float brightness = 1.0;
+			    
+			   // lines
+			    float t1 = time * 3.0;
+			    float t2 = (time + 0.3) * 7.0;
+			    t1 = (fract(t1) - 0.5) * 5.0;
+			    t2 = (fract(t2) - 0.5) * 5.0;
+			    float a = abs(vUv.y - t1);
+			    float b = abs(vUv.y - t2);
+			    a = a < 0.3 ? a : 1.0;
+			    b = b < 0.3 ? b : 1.0;
+			    brightness = sqrt(a) * sqrt(b);
+			    
+			    // dots
+			    float range = 0.03;
+			    
+			    float t3 = time * 20.0;
+			    t3 = floor(fract(t3) + 0.5);
+
+			    float x = floor(vUv.x / range);
+			    x = (vUv.x / range - x) * 2.0 - 1.0;
+			    float y = floor(vUv.y / range);
+			    y = (vUv.y / range - y) * 2.0 - 1.0;
+			    
+			    float r = pow(x, 2.0) + pow(y, 2.0);
+			    float c = min(sqrt(r) + t3, 1.0);
+			    brightness *= pow(c, 2.0);
+			    
+			    // vignette
+			    float d = pow((vUv.y - 0.5) * 2.0, 2.0) + pow((vUv.x - 0.5) * 2.0, 2.0);
+			    brightness *= 1.0 - sqrt(sqrt(d));
+			    brightness = brightness * 4.0 + (1.0 - d)/2.0;
+			    brightness = min(brightness, 1.0);
+
+			    // stripes
+			    float stripes = 7.0;
+			    float stripe = floor(vUv.y * stripes) / stripes;
+
+			    vec2 shifted_uv;
+			    if (stripe < random + 0.1 && stripe > random - 0.2) {
+				    float e = pow(1.0 - abs(vUv.y - 0.5) * 2.0, 2.0);
+			    	shifted_uv = vec2(vUv.x - pow(random - 0.2, 2.0) * e, vUv.y);
+			    } else {
+			    	shifted_uv = vUv;
+			    }
+
+			    gl_FragColor = vec4(texture2D(texture, shifted_uv).xyz * brightness, 1.0);
+			}
+		</script>
+
+		<!-- three.js code -->
+
+		<script>
+
+			var renderer = new THREE.WebGLRenderer({ antialias: true });
+			var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
+			var camera_inner_pivot = new THREE.Group();
+			var camera_outer_pivot = new THREE.Group();
+			camera.position.set(0, 2, -30);
+			camera_inner_pivot.add(camera)
+			camera_outer_pivot.add(camera_inner_pivot);
+			var scene = new THREE.Scene();
+
+			var path = "textures/";
+
+			var diffuseMaps = [
+				loadTexture(path + "Drone_diffuse_1_s_1.png"),
+				loadTexture(path + "Drone_diffuse_1_s_2.png"),
+				loadTexture(path + "Drone_diffuse_1_s_3.png"),
+				loadTexture(path + "Drone_diffuse_2_s.png")
+				];
+			var uniform_diffuseMap = { type: "t", value: diffuseMaps[0] };
+
+			var specularMaps = [
+				loadTexture(path + "Drone_specular_1_s.png"),
+				loadTexture(path + "Drone_specular_2_s.png")
+				];
+			var roughnessMaps = [
+				loadTexture(path + "Drone_roughness_1_s.png"),
+				loadTexture(path + "Drone_roughness_2_s.png")
+				];
+			var normalMaps = [
+				loadTexture(path + "Drone_normals_1_s.png"),
+				loadTexture(path + "Drone_normals_2_s.png")
+				];
+			var aoMaps = [
+				loadTexture(path + "Drone_ao_1_s.png"),
+				loadTexture(path + "Drone_ao_2_s.png")
+				];
+
+			var loader = new THREE.CubeTextureLoader();
+			loader.setPath(path + 'irradiance/');
+			var irradianceMap = loader.load([
+				'posx.png', 'negx.png',
+				'posy.png', 'negy.png',
+				'posz.png', 'negz.png'
+				]);
+
+			var reflectionMaps = [];
+			var mipLevels = 10;
+			for (var i = 0; i <= mipLevels; i++) {
+				loader.setPath(path + 'reflection/' + i + '/');
+				reflectionMaps[i] = loader.load([
+					'posx.png', 'negx.png',
+					'posy.png', 'negy.png',
+					'posz.png', 'negz.png'
+					]);
+			}
+			var reflectionMap = reflectionMaps[0];
+			reflectionMap.mipmaps = reflectionMaps;
+
+			var eyeMap = loadTexture(path + "Eye_map.png");
+
+
+			scene.background = reflectionMaps[2];
+			
+			var uniforms = {
+				normalScale: 		{ type: "v2", value: new THREE.Vector2(1, 1) },
+				pointLightPosition:	{ type: "v3", value: new THREE.Vector3() },
+				clight:				{ type: "v3", value: new THREE.Vector3(1.1, 1.1, 1.1) },
+				irradianceMap: 		{ type: "t", value: irradianceMap },
+				reflectionMap: 		{ type: "t", value: reflectionMap },
+				mipLevels:  		{ type: "i", value: mipLevels }
+			};
+
+			vs = document.getElementById("vertex").textContent;
+			fs = document.getElementById("fragment").textContent;
+			vs_eye = document.getElementById("vertex_eye").textContent;
+			fs_eye = document.getElementById("fragment_eye").textContent;
+
+			var materials = [];
+			var keys = Object.keys(uniforms);
+			for (var i = 0; i < 6; i++) {
+				materials[i] = new THREE.ShaderMaterial({ vertexShader: vs, fragmentShader: fs });
+				for (var j = 0; j < keys.length; j++) {
+					materials[i].uniforms[keys[j]] = uniforms[keys[j]];
+				}
+				materials[i].extensions.derivatives = true;
+				materials[i].extensions.shaderTextureLOD = true;
+			}
+
+			materials[0].uniforms.diffuseMap = uniform_diffuseMap;
+			materials[0].uniforms.specularMap = { type: "t", value: specularMaps[0] };
+			materials[0].uniforms.roughnessMap = { type: "t", value: roughnessMaps[0] };
+			materials[0].uniforms.normalMap = { type: "t", value: normalMaps[0] };
+			materials[0].uniforms.aoMap = { type: "t", value: aoMaps[0] };
+			materials[0].uniforms.invertedNormals = { type: "i", value: 0 };
+			
+			// material-specific uniforms:
+			for (var i = 0; i < 2; i++) {
+				materials[i].uniforms.diffuseMap = uniform_diffuseMap;
+				materials[i].uniforms.specularMap = { type: "t", value: specularMaps[0] };
+				materials[i].uniforms.roughnessMap = { type: "t", value: roughnessMaps[0] };
+				materials[i].uniforms.normalMap = { type: "t", value: normalMaps[0] };
+				materials[i].uniforms.aoMap = { type: "t", value: aoMaps[0] };
+			}
+			
+			for (var i = 2; i < 4; i++) {
+				materials[i].uniforms.diffuseMap = { type: "t", value: diffuseMaps[3] };
+				materials[i].uniforms.specularMap = { type: "t", value: specularMaps[1] };
+				materials[i].uniforms.roughnessMap = { type: "t", value: roughnessMaps[1] };
+				materials[i].uniforms.normalMap = { type: "t", value: normalMaps[1] };
+				materials[i].uniforms.aoMap = { type: "t", value: aoMaps[1] };
+			}
+
+			materials[0].uniforms.invertedNormals = { type: "b", value: false };			
+			materials[2].uniforms.invertedNormals = { type: "b", value: false };
+			materials[1].uniforms.invertedNormals = { type: "b", value: true };
+			materials[3].uniforms.invertedNormals = { type: "b", value: true };
+
+			materials[4] = new THREE.ShaderMaterial({ vertexShader: vs_eye, fragmentShader: fs_eye,
+				uniforms: {
+					random: { type: "f", value: 0 },
+					texture: { type: "t", value: eyeMap },
+					time: { type: "f", value: 0 }
+				}
+			});
+
+			// global variables
+			var time_curr, time_old;
+			var helix_rot_velocity = 0;
+			var mouseDown = false;
+			var mouse_old = new THREE.Vector2(),
+				mouse_curr = new THREE.Vector2();
+			var mouse_delta = new THREE.Vector2(),
+				mouse_delta_mean = new THREE.Vector2();
+
+			var samples_N = 10;
+			var samples = [];
+			for (var i = 0; i < samples_N; i++) {
+				samples[i] = new THREE.Vector2();
+			}
+			var samples_curr = 0;
+			var samples_sum = new THREE.Vector2();
+			var samples_lerp = new THREE.Vector2();
+
+			var eye_rot_2 = false
+			var quat_old_1 = new THREE.Quaternion(), quat_curr_1 = new THREE.Quaternion();
+			var quat_old_2 = new THREE.Quaternion(), quat_curr_2 = new THREE.Quaternion();
+			var eye_time_delta_1 = 0, eye_time_delta_2 = 0;
+
+			var loader = new THREE.OBJLoader();
+			loader.load("drone.obj", function(group) {
+				
+				var geometries = [];
+				for (var i = 0; i < group.children.length; i++) {
+					group.children[i].geometry.applyMatrix(group.children[i].matrixWorld);
+					geometries[group.children[i].name] = group.children[i].geometry;
+				}
+
+				var movables = {};
+
+				// build hierarchy
+				var helix_R = new THREE.Group();
+				movables.helix_R = helix_R;
+				helix_R.position.set(0.77394, -1.47490, 8.43524);
+				helix_R.add(new THREE.Mesh(geometries['1_Helix_R'], materials[0]));
+				helix_R.add(new THREE.Mesh(geometries['2_Helix_R'], materials[2]));
+				movables.blades_R = new THREE.Mesh(geometries['2_Blades_R'], materials[2])
+				helix_R.add(movables.blades_R);
+
+				var helix_L = new THREE.Group();
+				movables.helix_L = helix_L;
+				helix_L.position.set(0.77394, -1.47490, -8.43524);
+				helix_L.add(new THREE.Mesh(geometries['1_Helix_L'], materials[1]));
+				helix_L.add(new THREE.Mesh(geometries['2_Helix_L'], materials[3]));
+				movables.blades_L = new THREE.Mesh(geometries['2_Blades_L'], materials[3]);
+				helix_L.add(movables.blades_L);
+
+				var drone = new THREE.Group();
+				movables.drone = drone;
+				drone.add(helix_L);
+				drone.add(helix_R);
+				drone.add(new THREE.Mesh(geometries['1_Body'], materials[0]));
+				drone.add(new THREE.Mesh(geometries['2_Body'], materials[2]));
+
+				movables.eyeball = new THREE.Mesh(geometries['2_Eyeball'], materials[2]);
+				movables.eyeball.position.set(6.89038, -1.59322, 0);
+				drone.add(movables.eyeball);
+				var eye_plane_shader = new THREE.Mesh(geometries['Eye_plane_shader'], materials[4]);
+				eye_plane_shader.position.set(0.40022, 0.00124, 0);
+
+				movables.eyeball.add(eye_plane_shader);
+				movables.eye_rotors = new THREE.Mesh(geometries['2_Eye_rotors'], materials[2]);
+				movables.eye_rotors.position.set(6.03997, -1.59322, 0);
+				drone.add(movables.eye_rotors);
+
+				movables.gun_rotors_1 = new THREE.Mesh(geometries['2_Gun_rotors_1'], materials[2]);
+				movables.gun_rotors_1.position.set(4.53790, 0.52558, 0);
+				drone.add(movables.gun_rotors_1);
+				movables.gun_rotors_2 = new THREE.Mesh(geometries['2_Gun_rotors_2'], materials[2]);
+				movables.gun_rotors_2.position.set(4.53790, 0.52558, 0);
+				drone.add(movables.gun_rotors_2);
+
+				drone.rotation.y = Math.PI * 0.815;
+
+				init(movables);
+			});
+			
+			var lightMesh = new THREE.Mesh(
+				new THREE.SphereGeometry(1, 16, 16),
+				new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: true })
+				);
+			lightMesh.position.set(15, 20, -5);
+			scene.add(lightMesh);
+			
+			uniforms.pointLightPosition.value = new THREE.Vector3(15, 20, -5);
+
+
+			function loadTexture(file) {
+				return (new THREE.TextureLoader()).load(file , function(texture) {
+					texture.minFilter = THREE.LinearMipMapLinearFilter;
+					texture.anisotropy = renderer.getMaxAnisotropy();
+					texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+			  		texture.offset.set(0, 0);
+					texture.needsUpdate = true;
+					render();
+				});
+			}
+
+			function onResize() {
+
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+			}
+
+			function onMouseDown(event) {
+				if (event.button == THREE.MOUSE.LEFT) {
+					mouseDown = true;
+					mouse_old.set(event.clientX, event.clientY);
+					mouse_curr.copy(mouse_old);
+				}
+			}
+
+			function onMouseMove(event) {
+				if (mouseDown) {
+					mouse_curr.set(event.clientX, event.clientY);
+				}
+			}
+
+			function onMouseUp(event) {
+				if (event.button == THREE.MOUSE.LEFT) {
+					mouseDown = false;
+				}
+			}
+
+			function init(movables) {
+
+				camera.lookAt(movables.drone.position);
+
+				scene.add(movables.drone);
+				scene.add(camera_outer_pivot);
+				//scene.add(lightMesh);
+
+				document.body.appendChild(renderer.domElement);
+				renderer.setPixelRatio(window.devicePixelRatio);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+
+				window.addEventListener('resize', onResize, false);
+
+				renderer.domElement.addEventListener('mousedown', onMouseDown, false);
+				document.addEventListener('mousemove', onMouseMove, false);
+				document.addEventListener('mouseup', onMouseUp, false);
+
+				for (var i = 0; i < materials.length; i++) {
+					materials[i].needsUpdate = true;
+				}
+
+				time_curr = Date.now();
+				update(movables);
+			}
+
+			function update(movables) {
+
+				requestAnimationFrame(function() {
+					update(movables);
+				});
+
+				time_old = time_curr;
+				time_curr = Date.now();
+				time_delta = (time_curr - time_old)/1000;
+
+				// rotors, blades animation
+				movables.eye_rotors.rotation.x += time_delta;
+
+				movables.gun_rotors_1.rotation.x += 0.5 * time_delta;
+				movables.gun_rotors_2.rotation.x -= 0.5 * time_delta;
+
+				movables.blades_L.rotation.y -= 8 * time_delta;
+				movables.blades_R.rotation.y += 8 * time_delta;
+
+				// these are meant to be simple animations, parameters are chosen somewhat
+				// arbitrarily
+
+				if (mouseDown) {
+					mouse_delta.subVectors(mouse_curr, mouse_old);
+					mouse_delta.multiplyScalar(Math.PI/1000); // 1 px == PI/1000 rad
+					mouse_old.copy(mouse_curr);
+				}
+
+				// drone animation
+				movables.drone.rotation.y += mouse_delta.x;
+				var rot_z_max = Math.PI/6;
+				var rot_z = movables.drone.rotation.z - mouse_delta.y/2;
+				if (rot_z > rot_z_max) {
+					movables.drone.rotation.z = rot_z_max;
+				} else if (rot_z < -rot_z_max) {
+					movables.drone.rotation.z = -rot_z_max;
+				} else {
+					movables.drone.rotation.z = rot_z;
+				}
+
+				// camera animation
+				camera_outer_pivot.rotation.y -= 0.1 * mouse_delta.x;
+				camera_inner_pivot.rotation.x += 0.1 * mouse_delta.y;
+				// fall back to 0 when mouse_delta = (0, 0)
+				camera_inner_pivot.rotation.z = 0.95 * camera_inner_pivot.rotation.z
+											  + 0.1 * mouse_delta.x;
+
+				// helices animation
+				// compute cumulative mean, then interpolaate so that the helices won't look
+				// jerky at low speeds
+				samples_sum.sub(samples[samples_curr]);
+				samples[samples_curr].copy(mouse_delta);
+				samples_sum.add(samples[samples_curr]);
+				samples_curr++;
+				if (samples_curr == samples_N) {
+					samples_curr = 0;
+				}
+				var samples_mean = (new THREE.Vector2()).copy(samples_sum);
+				samples_mean.multiply(new THREE.Vector2(1/samples_N, 1/samples_N));
+
+				var s_a = 0.8;
+				samples_lerp.multiplyScalar(s_a);
+				samples_mean.multiplyScalar(1 - s_a);
+				samples_lerp.add(samples_mean);
+
+				// THETA <- (a * THETA + (1-a) * (THETA_0 + THETA_DELTA);
+				var h_a = 0.3;
+				var theta_L = movables.helix_L.rotation;
+				var theta_R = movables.helix_R.rotation;
+				var theta_0 = -movables.drone.rotation.z;
+				var theta_delta_L = Math.atan(20 * ( samples_lerp.x + samples_lerp.y)) * 2/3; // < PI/3
+				var theta_delta_R = Math.atan(20 * (-samples_lerp.x + samples_lerp.y)) * 2/3; // < PI/3
+
+				theta_L.z = h_a * theta_L.z + (1 - h_a) * (theta_0 + theta_delta_L);
+				theta_R.z = h_a * theta_R.z + (1 - h_a) * (theta_0 + theta_delta_R);				
+
+				// this ensures exponential falloff when mouse_delta would be (0, 0) (mouse up)
+				mouse_delta.multiplyScalar(0.9);
+
+				// eye animation
+				var quat_1 = new THREE.Quaternion();
+				var quat_2 = new THREE.Quaternion();
+				
+				var time_span_1 = 0.2;
+				var time_span_2 = 2;
+
+				if (eye_time_delta_1 < time_span_1) {
+					quat_1.copy(quat_old_1.slerp(quat_curr_1, eye_time_delta_1/time_span_1));
+					eye_time_delta_1 += time_delta;
+				} else {
+					eye_time_delta_1 = 0;
+					quat_1.copy(quat_curr_1);
+
+					var rand = new THREE.Vector2((Math.random()-0.5)/30, (Math.random()-0.5)/30);
+					var euler = new THREE.Euler(0, rand.x * Math.PI, rand.y * Math.PI);
+					quat_old_1.copy(quat_curr_1);
+					quat_curr_1.setFromEuler(euler);
+				}
+				
+				if (Math.random() < time_delta/2) {
+					eye_time_delta_2 = 0;
+
+					var rand = new THREE.Vector2((Math.random()-0.5)/3, (Math.random()-0.5)/3);
+					var euler = new THREE.Euler(0, rand.x * Math.PI, rand.y * Math.PI);
+					quat_old_2.copy(quat_old_2.slerp(quat_curr_2, eye_time_delta_2/time_span_2));
+					quat_curr_2.setFromEuler(euler);
+				}
+				if (eye_time_delta_2 < time_span_2) {
+					quat_2.copy(quat_old_2.slerp(quat_curr_2, eye_time_delta_2/time_span_2));
+					eye_time_delta_2 += time_delta;
+				} else {
+					eye_time_delta_2 = time_span_2;
+					quat_2.copy(quat_curr_2);
+				}
+				
+				movables.eyeball.quaternion.multiplyQuaternions(quat_1, quat_2);
+
+				var time_curr_s = time_curr / 1000;
+				materials[4].uniforms.time.value = time_curr_s - Math.floor(time_curr_s);
+				materials[4].uniforms.random.value = Math.random();
+
+
+				render();
+			}
+
+			function render() {
+				renderer.render(scene, camera);
+			}
+
+			function changeMaterial(mat_id) {
+				switch (mat_id) {
+					case 1:
+						uniform_diffuseMap.value = diffuseMaps[0];
+						break;
+					case 2:
+						uniform_diffuseMap.value = diffuseMaps[1];
+						break;
+					case 3:
+						console.log("TODO");
+						break;
+				}
+				render();
+			}
+
+		</script>
+	</body>
+</html>
