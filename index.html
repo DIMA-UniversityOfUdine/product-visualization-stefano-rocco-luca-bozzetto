@@ -207,53 +207,56 @@
 
 			void main() {
 
-				float brightness = 1.0;
-			    
-			   // lines
-			    float t1 = time * 3.0;
-			    float t2 = (time + 0.3) * 7.0;
-			    t1 = (fract(t1) - 0.5) * 5.0;
-			    t2 = (fract(t2) - 0.5) * 5.0;
-			    float a = abs(vUv.y - t1);
-			    float b = abs(vUv.y - t2);
-			    a = a < 0.3 ? a : 1.0;
-			    b = b < 0.3 ? b : 1.0;
-			    brightness = sqrt(a) * sqrt(b);
-			    
-			    // dots
-			    float range = 0.03;
-			    
-			    float t3 = time * 20.0;
-			    t3 = floor(fract(t3) + 0.5);
+			float brightness = 1.0;
 
-			    float x = floor(vUv.x / range);
-			    x = (vUv.x / range - x) * 2.0 - 1.0;
-			    float y = floor(vUv.y / range);
-			    y = (vUv.y / range - y) * 2.0 - 1.0;
-			    
-			    float r = pow(x, 2.0) + pow(y, 2.0);
-			    float c = min(sqrt(r) + t3, 1.0);
-			    brightness *= pow(c, 2.0);
-			    
-			    // vignette
-			    float d = pow((vUv.y - 0.5) * 2.0, 2.0) + pow((vUv.x - 0.5) * 2.0, 2.0);
-			    brightness *= 1.0 - sqrt(sqrt(d));
-			    brightness = brightness * 4.0 + (1.0 - d)/2.0;
-			    brightness = min(brightness, 1.0);
+			// lines
+			float t1 = time ;				// time 1
+			float t2 = (time + 0.3);		// time 2, shifted
+			t1 = (fract(t1) - 0.5) * 5.0;	// take fractional part, shift interval center to 0,
+											// spread out on y 
+			t2 = (fract(t2) - 0.5) * 5.0;
+			float a = abs(vUv.y - t1);		// make line scroll upwards
+			float b = abs(vUv.y - t2);
+			a = a < 0.05 ? a : 1.0;			// thin out line
+			b = b < 0.05 ? b : 1.0;
+			brightness = a * b;				// multiply
 
-			    // stripes
-			    float stripes = 7.0;
-			    float stripe = floor(vUv.y * stripes) / stripes;
+			// dots
+			float range = 0.05;				// range of dots
 
-			    vec2 shifted_uv;
-			    if (stripe < random + 0.1 && stripe > random - 0.2) {
-				    float e = pow(1.0 - abs(vUv.y - 0.5) * 2.0, 2.0);
-			    	shifted_uv = vec2(vUv.x - pow(random - 0.2, 2.0) * e, vUv.y);
-			    } else {
-			    	shifted_uv = vUv;
-			    }
+			float t3 = time * 20.0;			// time 3
+			t3 = floor(fract(t3) + 0.5);	// as above
 
-			    gl_FragColor = vec4(texture2D(texture, shifted_uv).xyz * brightness, 1.0);
+			float x = floor(vUv.x / range);			// integer division uv.x/range
+			x = (vUv.x / range - x) * 2.0 - 1.0;	// take fractional remainder, shift interval
+													// center to 0
+			float y = floor(vUv.y / range);			// same
+			y = (vUv.y / range - y) * 2.0 - 1.0;
+
+			float r = pow(x, 2.0) + pow(y, 2.0);	// get dot
+			float c = min(sqrt(sqrt(r)) + t3, 1.0);	// make dot flicker a bit
+			brightness *= pow(c, 2.0);				// multiply
+
+			// vignette
+														// get black-filled circle
+			float d = pow((vUv.y - 0.5) * 2.0, 2.0) + pow((vUv.x - 0.5) * 2.0, 2.0);
+			brightness *= (1.0 - sqrt(sqrt(d)));		// multiply by inverse = vignette
+			brightness = min(brightness * 8.0, 1.0);	// bump up brightness
+
+			// stripes
+			float stripes = 7.0;								// number of stripes
+			float stripe = floor(vUv.y * stripes) / stripes;	// divide y in stripes
+
+			vec2 shifted_uv;
+			if (stripe < random + 0.1 && stripe > random - 0.2) {
+				float e = pow(1.0 - abs(vUv.y - 0.5) * 2.0, 2.0) * 2.0;			// shift amount
+				shifted_uv = vec2(vUv.x - pow(random - 0.2, 2.0) * e, vUv.y);	// shift
+				brightness *= 1.5;												// make brighter
+			} else {
+				shifted_uv = vUv;
+			}
+
+			gl_FragColor = vec4(texture2D(texture, shifted_uv).xyz * brightness, 1.0);
 			}
 		</script>
 
