@@ -55,6 +55,7 @@ li:hover .button_outer_text {
 
 .button {
     background-color: rgba(255, 255, 255, 0);
+    cursor: default;
     float: left;
 }
 
@@ -85,4 +86,11 @@ li:hover .button_outer_text {
     bottom: 0px;
     position: fixed;
     width: 100%;
+
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }

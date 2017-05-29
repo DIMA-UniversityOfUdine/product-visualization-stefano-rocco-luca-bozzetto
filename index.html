@@ -197,7 +197,8 @@
 			precision highp float;
 			precision highp int;
 
-			uniform float random;
+			uniform float random1;
+			uniform float random2;
 			uniform sampler2D texture;
 			uniform float time;
 
@@ -210,16 +211,12 @@
 			float brightness = 1.0;
 
 			// lines
-			float t1 = time ;				// time 1
-			float t2 = (time + 0.3);		// time 2, shifted
-			t1 = (fract(t1) - 0.5) * 5.0;	// take fractional part, shift interval center to 0,
-											// spread out on y 
-			t2 = (fract(t2) - 0.5) * 5.0;
-			float a = abs(vUv.y - t1);		// make line scroll upwards
-			float b = abs(vUv.y - t2);
-			a = a < 0.05 ? a : 1.0;			// thin out line
-			b = b < 0.05 ? b : 1.0;
-			brightness = a * b;				// multiply
+			float t1 = fract(time * 2.0);	// time 1
+			float yscale = 0.8;				// scale y
+			float a = abs(t1 - (vUv.y * yscale - (yscale - 1.0)/2.0));	// get line
+			if (a < 0.05) {					// narrow line
+				brightness = sqrt(sqrt(a));	// (multiply)
+			}
 
 			// dots
 			float range = 0.05;				// range of dots
@@ -228,30 +225,32 @@
 			t3 = floor(fract(t3) + 0.5);	// as above
 
 			float x = floor(vUv.x / range);			// integer division uv.x/range
-			x = (vUv.x / range - x) * 2.0 - 1.0;	// take fractional remainder, shift interval
+			x = (vUv.x / range - x) * 2.0 - 1.0;	// take fractional remainder, shift
 													// center to 0
 			float y = floor(vUv.y / range);			// same
 			y = (vUv.y / range - y) * 2.0 - 1.0;
 
 			float r = pow(x, 2.0) + pow(y, 2.0);	// get dot
-			float c = min(sqrt(sqrt(r)) + t3, 1.0);	// make dot flicker a bit
-			brightness *= pow(c, 2.0);				// multiply
+			float b = min(sqrt(sqrt(r)) + t3, 1.0);	// make dot flicker a bit
+			brightness *= pow(b, 2.0);				// multiply
 
 			// vignette
 														// get black-filled circle
-			float d = pow((vUv.y - 0.5) * 2.0, 2.0) + pow((vUv.x - 0.5) * 2.0, 2.0);
-			brightness *= (1.0 - sqrt(sqrt(d)));		// multiply by inverse = vignette
-			brightness = min(brightness * 8.0, 1.0);	// bump up brightness
+			float c = pow((vUv.y - 0.5) * 2.0, 2.0) + pow((vUv.x - 0.5) * 2.0, 2.0);
+			brightness *= (1.0 - sqrt(sqrt(c)));		// multiply by inverse = vignette
+			brightness = min(brightness * 5.0, 1.5);	// bump up brightness
 
 			// stripes
-			float stripes = 7.0;								// number of stripes
+			float stripes = 9.0;								// number of stripes
 			float stripe = floor(vUv.y * stripes) / stripes;	// divide y in stripes
 
 			vec2 shifted_uv;
-			if (stripe < random + 0.1 && stripe > random - 0.2) {
-				float e = pow(1.0 - abs(vUv.y - 0.5) * 2.0, 2.0) * 2.0;			// shift amount
-				shifted_uv = vec2(vUv.x - pow(random - 0.2, 2.0) * e, vUv.y);	// shift
-				brightness *= 1.5;												// make brighter
+			float thresh = 0.9;								// frequency
+			range = random2 / 2.0 + 0.3;					// range of stripes
+			if (random1 > thresh && stripe < range + 0.2 && stripe > range - 0.2) {
+				float d = (1.0 - abs(stripe - 0.5)) * 2.0;	// shift amount
+				shifted_uv = vec2(vUv.x + d, vUv.y);		// shift
+				brightness += 1.5 * (1.0 - vUv.x);			// make brighter
 			} else {
 				shifted_uv = vUv;
 			}
@@ -382,7 +381,8 @@
 
 			materials[4] = new THREE.ShaderMaterial({ vertexShader: vs_eye, fragmentShader: fs_eye,
 				uniforms: {
-					random: { type: "f", value: 0 },
+					random1: { type: "f", value: 0 },
+					random2: { type: "f", value: 0 },
 					texture: { type: "t", value: eyeMap },
 					time: { type: "f", value: 0 }
 				}
@@ -662,7 +662,8 @@
 
 				var time_curr_s = time_curr / 1000;
 				materials[4].uniforms.time.value = time_curr_s - Math.floor(time_curr_s);
-				materials[4].uniforms.random.value = Math.random();
+				materials[4].uniforms.random1.value = Math.random();
+				materials[4].uniforms.random2.value = Math.random();
 
 
 				render();
