@@ -66,6 +66,8 @@ Some details of the normal maps were obtained by "projecting" a separate hi-res 
 
 By the way I had to unwrap and repack the whole model one more time, because I found out some pieces happened to exhibit double or hidden vertices, edges and faces, and n-gons (which were quite dsiturbing to find out in the most improbable of the places), not to mention that the latter of which are not even supported by `Three.js`' `OBJ` loader. Good thing I haven't started texturing yet.
 
+**L** is searching something on lights, how to light up the product like in advertising and catalogues.
+
 ## 05.16
 
 I'm still trying to bake the ambient occlusion maps, which are harder to get than I thought because some object need not affect some others that are going to be able to move, as they would exhibit the occlusion properties of their original relative orientation, which would be wrong.
@@ -98,7 +100,7 @@ The maps are pretty much done, but I feel like they still need some detailing. A
 
 ## 05.27
 
-Writing even a simple `html/css` menu is harder than I thought--honestly much harder than it should. I hope **L** can fix it up within the day after tomorrow at latest. He's currently working on the light setting. At least I managed to make it work and interface with the main script code.
+Writing even a simple `html/css` menu is harder than I thought--honestly much harder than it should. I hope **L** can fix it up within the day after tomorrow at latest. He's still working on the light setting. At least I managed to make it work and interface with the main script code.
 
 ## 05.28
 
