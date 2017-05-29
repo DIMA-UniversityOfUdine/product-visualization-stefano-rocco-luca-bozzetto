@@ -38,20 +38,9 @@
 						<li id="button_inner_inactive" onclick="select_element(this); changeMaterial(2)">
 							<span class="button_inner_text">NAVY_BLOTCHED</span>
 						</li>
-						<li id="button_inner_inactive" onclick="select_element(this); changeMaterial(3)">
-							<span class="button_inner_text">AUTUMN_FRECKLED</span>
-						</li>
 					</ul>
 				</li>
-				<li class="button">
-					<span class="button_outer_text">PROPERTIES</span>
-					<ul id="menu_2" class="menu_hidden">
-						<li></li>
-						<li></li>
-						<li></li>
-					</ul>
-				</li>
-				<li class="button" style="float: right">
+				<li class="button" style="float: right; cursor: pointer">
 					<span class="button_outer_text">BUY</span>
 				</li>
 			</ul>
@@ -92,8 +81,8 @@
 			varying vec3 vPosition;
 			varying vec3 wPosition;
 			varying vec2 vUv;
-			uniform vec3 pointLightPosition; // in world space
-			uniform vec3 clight;
+			uniform vec3 pointLightPositions[3]; // in world space
+			uniform vec3 clights[3];
 			uniform bool invertedNormals;
 
 			uniform sampler2D diffuseMap;
@@ -103,10 +92,11 @@
 			uniform sampler2D aoMap;
 			uniform samplerCube irradianceMap;
 			uniform samplerCube reflectionMap;
+			uniform int mipLevels;
+
 			const float PI = 3.14159;
 
-			vec3 FSchlick(float lDoth) {
-				vec3 cspec = pow(texture2D(specularMap, vUv).xyz, vec3(2.2));
+			vec3 FSchlick(float lDoth, vec3 cspec) {
 				return (cspec + (vec3(1.0)-cspec)*pow(1.0 - lDoth, 5.0));
 			}
 
@@ -121,9 +111,20 @@
 			}
 
 			float GSmith(float nDotv, float nDotl, float roughness) {
-					float k = roughness*roughness;
-					return G1(nDotl, k)*G1(nDotv, k);
+				float k = roughness*roughness;
+				return G1(nDotl, k)*G1(nDotv, k);
 			}
+
+			float getSpecularMIPLevel(float blinnShininessExponent, int maxMIPLevel) {
+		 		float maxMIPLevelScalar = float(maxMIPLevel);
+		 		float desiredMIPLevel = maxMIPLevelScalar - 0.79248 - 0.5 * log2(pow(blinnShininessExponent, 2.0) + 1.0);
+		 		return clamp(desiredMIPLevel, 0.0, maxMIPLevelScalar);
+		 	}
+
+			float GGXRoughnessToBlinnExponent( float ggxRoughness ) {
+				ggxRoughness += 0.0001;
+		  		return (2.0 / (ggxRoughness * ggxRoughness) - 2.0);
+		 	}
 
 			vec3 perturbNormal2Arb(vec3 eye_pos, vec3 surf_norm) {
 
@@ -145,37 +146,66 @@
 				return normalize(tsn * mapN);
 			}
 
+			/* from 16-glossy-reflection-mapping.html by Roberto Ranon */
+			vec3 BRDF_Specular_GGX_Environment(vec3 n, vec3 v, vec3 cspec, float roughness) {
+
+				float nDotv = saturate(dot(n, v));
+				const vec4 c0 = vec4(-1, -0.0275, -0.572, 0.022);
+				const vec4 c1 = vec4(1, 0.0425, 1.04, - 0.04);
+				vec4 r = roughness * c0 + c1;
+				float a004 = min(r.x * r.x, exp2(-9.28 * nDotv)) * r.x + r.y;
+				vec2 AB = vec2(-1.04, 1.04) * a004 + r.zw;
+				return cspec * AB.x + AB.y;
+			}
+
 			void main() {
-				
-				vec4 lPosition = viewMatrix * vec4(pointLightPosition, 1.0);
-				vec3 l = normalize(lPosition.xyz - vPosition.xyz);
+
 				vec3 n = perturbNormal2Arb(vPosition, normalize(vNormal));
 				vec3 v = normalize(-vPosition);
-				vec3 h = normalize(v + l);
 
 				// small quantity to prevent divisions by 0
-				float nDotl = max(dot(n, l), 0.000001);
-				float lDoth = max(dot(l, h), 0.000001);
-				float nDoth = max(dot(n, h), 0.000001);
-				float vDoth = max(dot(v, h), 0.000001);
 				float nDotv = max(dot(n, v), 0.000001);
-				vec3 fresnel = FSchlick(lDoth);
+
 				vec3 cdiff = pow(texture2D(diffuseMap, vUv).xyz, vec3(2.2));
+				vec3 cspec = pow(texture2D(specularMap, vUv).xyz, vec3(2.2));
 				float roughness = texture2D(roughnessMap, vUv).x;
-				vec3 BRDF = (vec3(1.0)-fresnel) * cdiff / PI
-						  + fresnel 			* GSmith(nDotv, nDotl, roughness)
-						  						* DGGX(nDoth, roughness*roughness)
-						  						/ (4.0*nDotl*nDotv);
 
 				vec3 wN = normalize((vec4(n, 0.0) * viewMatrix).xyz);
 				vec3 wV = cameraPosition - wPosition;
 				vec3 r = reflect(-wV, wN);
-				vec3 environLight = pow(textureCubeLodEXT(reflectionMap, vec3(-r.x, r.yz), roughness * 10.0).xyz, vec3(2.2));
+				r = vec3(-r.x, r.yz);
+
+				float blinnShininessExponent = GGXRoughnessToBlinnExponent(roughness);
+				float specularMIPLevel = getSpecularMIPLevel(blinnShininessExponent, mipLevels);
+
+				vec3 environLight = pow(textureCubeLodEXT(reflectionMap, r, specularMIPLevel).xyz, vec3(2.2));
 				vec3 ambientLight = pow(textureCube(irradianceMap, wN).xyz, vec3(2.2));
 
-				vec3 outRadiance = (PI * clight * nDotl * BRDF)
-								 + (fresnel * environLight) 
-								 + (ambientLight * cdiff * texture2D(aoMap, vUv).xyz);
+				vec3 directRadiance = vec3(0.0);
+				for (int i = 0; i < 3; i++) {
+					vec4 lPosition = viewMatrix * vec4(pointLightPositions[i], 1.0);
+					vec3 l = normalize(lPosition.xyz - vPosition.xyz);
+					vec3 h = normalize(v + l);
+
+					// small quantity to prevent divisions by 0
+					float nDotl = max(dot(n, l), 0.000001);
+					float lDoth = max(dot(l, h), 0.000001);
+					float nDoth = max(dot(n, h), 0.000001);
+					float vDoth = max(dot(v, h), 0.000001);
+					
+					vec3 fresnel = FSchlick(lDoth, cspec);
+					vec3 BRDF = (vec3(1.0)-fresnel) * cdiff / PI
+						  		+ fresnel 			* GSmith(nDotv, nDotl, roughness)
+						  							* DGGX(nDoth, roughness * roughness)
+						  							/ (4.0 * nDotl * nDotv);
+
+					directRadiance += PI * clights[i] * nDotl * BRDF;
+				}
+
+				vec3 ambientFresnel = FSchlick(nDotv, cspec);
+				vec3 outRadiance = directRadiance
+								 + (ambientLight * cdiff * texture2D(aoMap, vUv).xyz)
+								 + (BRDF_Specular_GGX_Environment(n, v, cspec, roughness) * environLight);
 				// gamma encode the final value
 				gl_FragColor = vec4(pow(outRadiance, vec3(1.0/2.2)), 1.0);
 			}
@@ -208,54 +238,54 @@
 
 			void main() {
 
-			float brightness = 1.0;
+				float brightness = 1.0;
 
-			// lines
-			float t1 = fract(time * 2.0);	// time 1
-			float yscale = 0.8;				// scale y
-			float a = abs(t1 - (vUv.y * yscale - (yscale - 1.0)/2.0));	// get line
-			if (a < 0.05) {					// narrow line
-				brightness = sqrt(sqrt(a));	// (multiply)
-			}
+				// lines
+				float t1 = fract(time * 2.0);	// time 1
+				float yscale = 0.8;				// scale y
+				float a = abs(t1 - (vUv.y * yscale - (yscale - 1.0)/2.0));	// get line
+				if (a < 0.05) {					// narrow line
+					brightness = sqrt(sqrt(a));	// (multiply)
+				}
 
-			// dots
-			float range = 0.05;				// range of dots
+				// dots
+				float range = 0.05;				// range of dots
 
-			float t3 = time * 20.0;			// time 3
-			t3 = floor(fract(t3) + 0.5);	// as above
+				float t3 = time * 20.0;			// time 3
+				t3 = floor(fract(t3) + 0.5);	// as above
 
-			float x = floor(vUv.x / range);			// integer division uv.x/range
-			x = (vUv.x / range - x) * 2.0 - 1.0;	// take fractional remainder, shift
-													// center to 0
-			float y = floor(vUv.y / range);			// same
-			y = (vUv.y / range - y) * 2.0 - 1.0;
+				float x = floor(vUv.x / range);			// integer division uv.x/range
+				x = (vUv.x / range - x) * 2.0 - 1.0;	// take fractional remainder, shift
+														// center to 0
+				float y = floor(vUv.y / range);			// same
+				y = (vUv.y / range - y) * 2.0 - 1.0;
 
-			float r = pow(x, 2.0) + pow(y, 2.0);	// get dot
-			float b = min(sqrt(sqrt(r)) + t3, 1.0);	// make dot flicker a bit
-			brightness *= pow(b, 2.0);				// multiply
+				float r = pow(x, 2.0) + pow(y, 2.0);	// get dot
+				float b = min(sqrt(sqrt(r)) + t3, 1.0);	// make dot flicker a bit
+				brightness *= pow(b, 2.0);				// multiply
 
-			// vignette
-														// get black-filled circle
-			float c = pow((vUv.y - 0.5) * 2.0, 2.0) + pow((vUv.x - 0.5) * 2.0, 2.0);
-			brightness *= (1.0 - sqrt(sqrt(c)));		// multiply by inverse = vignette
-			brightness = min(brightness * 5.0, 1.5);	// bump up brightness
+				// vignette
+															// get black-filled circle
+				float c = pow((vUv.y - 0.5) * 2.0, 2.0) + pow((vUv.x - 0.5) * 2.0, 2.0);
+				brightness *= (1.0 - sqrt(sqrt(c)));		// multiply by inverse = vignette
+				brightness = min(brightness * 5.0, 1.5);	// bump up brightness
 
-			// stripes
-			float stripes = 9.0;								// number of stripes
-			float stripe = floor(vUv.y * stripes) / stripes;	// divide y in stripes
+				// stripes
+				float stripes = 9.0;								// number of stripes
+				float stripe = floor(vUv.y * stripes) / stripes;	// divide y in stripes
 
-			vec2 shifted_uv;
-			float thresh = 0.9;								// frequency
-			range = random2 / 2.0 + 0.3;					// range of stripes
-			if (random1 > thresh && stripe < range + 0.2 && stripe > range - 0.2) {
-				float d = (1.0 - abs(stripe - 0.5)) * 2.0;	// shift amount
-				shifted_uv = vec2(vUv.x + d, vUv.y);		// shift
-				brightness += 1.5 * (1.0 - vUv.x);			// make brighter
-			} else {
-				shifted_uv = vUv;
-			}
+				vec2 shifted_uv;
+				float thresh = 0.9;								// frequency
+				range = random2 / 2.0 + 0.3;					// range of stripes
+				if (random1 > thresh && stripe < range + 0.2 && stripe > range - 0.2) {
+					float d = (1.0 - abs(stripe - 0.5)) * 2.0;	// shift amount
+					shifted_uv = vec2(vUv.x + d, vUv.y);		// shift
+					brightness += 1.5 * (1.0 - vUv.x);			// make brighter
+				} else {
+					shifted_uv = vUv;
+				}
 
-			gl_FragColor = vec4(texture2D(texture, shifted_uv).xyz * brightness, 1.0);
+				gl_FragColor = vec4(texture2D(texture, shifted_uv).xyz * brightness, 1.0);
 			}
 		</script>
 
@@ -267,11 +297,12 @@
 			var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
 			var camera_inner_pivot = new THREE.Group();
 			var camera_outer_pivot = new THREE.Group();
-			camera.position.set(0, 2, -30);
+			camera.position.set(0, 4, -30);
 			camera_inner_pivot.add(camera)
 			camera_outer_pivot.add(camera_inner_pivot);
 			var scene = new THREE.Scene();
 
+/* ---------------------------------------------------------- maps */
 			var path = "textures/";
 
 			var diffuseMaps = [
@@ -324,14 +355,14 @@
 
 
 			scene.background = reflectionMaps[2];
-			
+
+/* ---------------------------------------------------------- materials */
 			var uniforms = {
-				normalScale: 		{ type: "v2", value: new THREE.Vector2(1, 1) },
-				pointLightPosition:	{ type: "v3", value: new THREE.Vector3() },
-				clight:				{ type: "v3", value: new THREE.Vector3(1.1, 1.1, 1.1) },
-				irradianceMap: 		{ type: "t", value: irradianceMap },
-				reflectionMap: 		{ type: "t", value: reflectionMap },
-				mipLevels:  		{ type: "i", value: mipLevels }
+				pointLightPositions:	{ type: "v3v", value: [] },
+				clights:				{ type: "v3v", value: [] },
+				irradianceMap: 			{ type: "t", value: irradianceMap },
+				reflectionMap: 			{ type: "t", value: reflectionMap },
+				mipLevels:  			{ type: "i", value: mipLevels }
 			};
 
 			vs = document.getElementById("vertex").textContent;
@@ -341,7 +372,7 @@
 
 			var materials = [];
 			var keys = Object.keys(uniforms);
-			for (var i = 0; i < 6; i++) {
+			for (var i = 0; i < 4; i++) {
 				materials[i] = new THREE.ShaderMaterial({ vertexShader: vs, fragmentShader: fs });
 				for (var j = 0; j < keys.length; j++) {
 					materials[i].uniforms[keys[j]] = uniforms[keys[j]];
@@ -349,13 +380,6 @@
 				materials[i].extensions.derivatives = true;
 				materials[i].extensions.shaderTextureLOD = true;
 			}
-
-			materials[0].uniforms.diffuseMap = uniform_diffuseMap;
-			materials[0].uniforms.specularMap = { type: "t", value: specularMaps[0] };
-			materials[0].uniforms.roughnessMap = { type: "t", value: roughnessMaps[0] };
-			materials[0].uniforms.normalMap = { type: "t", value: normalMaps[0] };
-			materials[0].uniforms.aoMap = { type: "t", value: aoMaps[0] };
-			materials[0].uniforms.invertedNormals = { type: "i", value: 0 };
 			
 			// material-specific uniforms:
 			for (var i = 0; i < 2; i++) {
@@ -374,7 +398,7 @@
 				materials[i].uniforms.aoMap = { type: "t", value: aoMaps[1] };
 			}
 
-			materials[0].uniforms.invertedNormals = { type: "b", value: false };			
+			materials[0].uniforms.invertedNormals = { type: "b", value: false };
 			materials[2].uniforms.invertedNormals = { type: "b", value: false };
 			materials[1].uniforms.invertedNormals = { type: "b", value: true };
 			materials[3].uniforms.invertedNormals = { type: "b", value: true };
@@ -388,7 +412,7 @@
 				}
 			});
 
-			// global variables
+/* ---------------------------------------------------------- global variables */
 			var time_curr, time_old;
 			var helix_rot_velocity = 0;
 			var mouseDown = false;
@@ -411,6 +435,7 @@
 			var quat_old_2 = new THREE.Quaternion(), quat_curr_2 = new THREE.Quaternion();
 			var eye_time_delta_1 = 0, eye_time_delta_2 = 0;
 
+/* ---------------------------------------------------------- obj loading */
 			var loader = new THREE.OBJLoader();
 			loader.load("drone.obj", function(group) {
 				
@@ -420,63 +445,67 @@
 					geometries[group.children[i].name] = group.children[i].geometry;
 				}
 
-				var movables = {};
+				var objects = {};
 
 				// build hierarchy
-				var helix_R = new THREE.Group();
-				movables.helix_R = helix_R;
-				helix_R.position.set(0.77394, -1.47490, 8.43524);
-				helix_R.add(new THREE.Mesh(geometries['1_Helix_R'], materials[0]));
-				helix_R.add(new THREE.Mesh(geometries['2_Helix_R'], materials[2]));
-				movables.blades_R = new THREE.Mesh(geometries['2_Blades_R'], materials[2])
-				helix_R.add(movables.blades_R);
+				objects.helix_R = new THREE.Group();
+				objects.helix_R.position.set(0.77394, -1.47490, 8.43524);
+				objects.helix_R.add(new THREE.Mesh(geometries['1_Helix_R'], materials[0]));
+				objects.helix_R.add(new THREE.Mesh(geometries['2_Helix_R'], materials[2]));
+				objects.blades_R = new THREE.Mesh(geometries['2_Blades_R'], materials[2])
+				objects.helix_R.add(objects.blades_R);
 
-				var helix_L = new THREE.Group();
-				movables.helix_L = helix_L;
-				helix_L.position.set(0.77394, -1.47490, -8.43524);
-				helix_L.add(new THREE.Mesh(geometries['1_Helix_L'], materials[1]));
-				helix_L.add(new THREE.Mesh(geometries['2_Helix_L'], materials[3]));
-				movables.blades_L = new THREE.Mesh(geometries['2_Blades_L'], materials[3]);
-				helix_L.add(movables.blades_L);
+				objects.helix_L = new THREE.Group();
+				objects.helix_L.position.set(0.77394, -1.47490, -8.43524);
+				objects.helix_L.add(new THREE.Mesh(geometries['1_Helix_L'], materials[1]));
+				objects.helix_L.add(new THREE.Mesh(geometries['2_Helix_L'], materials[3]));
+				objects.blades_L = new THREE.Mesh(geometries['2_Blades_L'], materials[3]);
+				objects.helix_L.add(objects.blades_L);
 
-				var drone = new THREE.Group();
-				movables.drone = drone;
-				drone.add(helix_L);
-				drone.add(helix_R);
-				drone.add(new THREE.Mesh(geometries['1_Body'], materials[0]));
-				drone.add(new THREE.Mesh(geometries['2_Body'], materials[2]));
+				objects.drone = new THREE.Group();
+				objects.drone.add(objects.helix_L);
+				objects.drone.add(objects.helix_R);
+				objects.drone.add(new THREE.Mesh(geometries['1_Body'], materials[0]));
+				objects.drone.add(new THREE.Mesh(geometries['2_Body'], materials[2]));
 
-				movables.eyeball = new THREE.Mesh(geometries['2_Eyeball'], materials[2]);
-				movables.eyeball.position.set(6.89038, -1.59322, 0);
-				drone.add(movables.eyeball);
+				objects.eyeball = new THREE.Mesh(geometries['2_Eyeball'], materials[2]);
+				objects.eyeball.position.set(6.89038, -1.59322, 0);
+				objects.drone.add(objects.eyeball);
 				var eye_plane_shader = new THREE.Mesh(geometries['Eye_plane_shader'], materials[4]);
 				eye_plane_shader.position.set(0.40022, 0.00124, 0);
 
-				movables.eyeball.add(eye_plane_shader);
-				movables.eye_rotors = new THREE.Mesh(geometries['2_Eye_rotors'], materials[2]);
-				movables.eye_rotors.position.set(6.03997, -1.59322, 0);
-				drone.add(movables.eye_rotors);
+				objects.eyeball.add(eye_plane_shader);
+				objects.eye_rotors = new THREE.Mesh(geometries['2_Eye_rotors'], materials[2]);
+				objects.eye_rotors.position.set(6.03997, -1.59322, 0);
+				objects.drone.add(objects.eye_rotors);
 
-				movables.gun_rotors_1 = new THREE.Mesh(geometries['2_Gun_rotors_1'], materials[2]);
-				movables.gun_rotors_1.position.set(4.53790, 0.52558, 0);
-				drone.add(movables.gun_rotors_1);
-				movables.gun_rotors_2 = new THREE.Mesh(geometries['2_Gun_rotors_2'], materials[2]);
-				movables.gun_rotors_2.position.set(4.53790, 0.52558, 0);
-				drone.add(movables.gun_rotors_2);
+				objects.gun_rotors_1 = new THREE.Mesh(geometries['2_Gun_rotors_1'], materials[2]);
+				objects.gun_rotors_1.position.set(4.53790, 0.52558, 0);
+				objects.drone.add(objects.gun_rotors_1);
+				objects.gun_rotors_2 = new THREE.Mesh(geometries['2_Gun_rotors_2'], materials[2]);
+				objects.gun_rotors_2.position.set(4.53790, 0.52558, 0);
+				objects.drone.add(objects.gun_rotors_2);
 
-				drone.rotation.y = Math.PI * 0.815;
+				objects.drone.rotation.y = Math.PI * 0.815;
 
-				init(movables);
+				init(objects);
 			});
-			
+
+/* ---------------------------------------------------------- lights */
+			/*
 			var lightMesh = new THREE.Mesh(
 				new THREE.SphereGeometry(1, 16, 16),
 				new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: true })
 				);
 			lightMesh.position.set(15, 20, -5);
 			scene.add(lightMesh);
-			
-			uniforms.pointLightPosition.value = new THREE.Vector3(15, 20, -5);
+			*/
+			uniforms.clights.value[0] = new THREE.Vector3(1.2, 1.2, 1.2);		// main, neutral
+			uniforms.clights.value[1] = new THREE.Vector3(0.13, 0.19, 0.2);		// bottom, cold
+			uniforms.clights.value[2] = new THREE.Vector3(0.06, 0.055, 0.04);	// side, warm
+			uniforms.pointLightPositions.value[0] = new THREE.Vector3(15, 20, -5);
+			uniforms.pointLightPositions.value[1] = new THREE.Vector3(-5, -20, 5);
+			uniforms.pointLightPositions.value[2] = new THREE.Vector3(-25, 5, 0);
 
 
 			function loadTexture(file) {
@@ -517,13 +546,12 @@
 				}
 			}
 
-			function init(movables) {
+			function init(objects) {
 
-				camera.lookAt(movables.drone.position);
+				camera.lookAt(objects.drone.position);
 
-				scene.add(movables.drone);
+				scene.add(objects.drone);
 				scene.add(camera_outer_pivot);
-				//scene.add(lightMesh);
 
 				document.body.appendChild(renderer.domElement);
 				renderer.setPixelRatio(window.devicePixelRatio);
@@ -540,27 +568,27 @@
 				}
 
 				time_curr = Date.now();
-				update(movables);
+				update(objects);
 			}
 
-			function update(movables) {
+			function update(objects) {
 
 				requestAnimationFrame(function() {
-					update(movables);
+					update(objects);
 				});
 
 				time_old = time_curr;
 				time_curr = Date.now();
 				time_delta = (time_curr - time_old)/1000;
 
-				// rotors, blades animation
-				movables.eye_rotors.rotation.x += time_delta;
+/* ---------------------------------------------------------- rotors, blades animation */
+				objects.eye_rotors.rotation.x += time_delta;
 
-				movables.gun_rotors_1.rotation.x += 0.5 * time_delta;
-				movables.gun_rotors_2.rotation.x -= 0.5 * time_delta;
+				objects.gun_rotors_1.rotation.x += 0.5 * time_delta;
+				objects.gun_rotors_2.rotation.x -= 0.5 * time_delta;
 
-				movables.blades_L.rotation.y -= 8 * time_delta;
-				movables.blades_R.rotation.y += 8 * time_delta;
+				objects.blades_L.rotation.y -= 8 * time_delta;
+				objects.blades_R.rotation.y += 8 * time_delta;
 
 				// these are meant to be simple animations, parameters are chosen somewhat
 				// arbitrarily
@@ -571,26 +599,26 @@
 					mouse_old.copy(mouse_curr);
 				}
 
-				// drone animation
-				movables.drone.rotation.y += mouse_delta.x;
+/* ---------------------------------------------------------- drone animation */
+				objects.drone.rotation.y += mouse_delta.x;
 				var rot_z_max = Math.PI/6;
-				var rot_z = movables.drone.rotation.z - mouse_delta.y/2;
+				var rot_z = objects.drone.rotation.z - mouse_delta.y/2;
 				if (rot_z > rot_z_max) {
-					movables.drone.rotation.z = rot_z_max;
+					objects.drone.rotation.z = rot_z_max;
 				} else if (rot_z < -rot_z_max) {
-					movables.drone.rotation.z = -rot_z_max;
+					objects.drone.rotation.z = -rot_z_max;
 				} else {
-					movables.drone.rotation.z = rot_z;
+					objects.drone.rotation.z = rot_z;
 				}
 
-				// camera animation
+/* ---------------------------------------------------------- camera animation */
 				camera_outer_pivot.rotation.y -= 0.1 * mouse_delta.x;
 				camera_inner_pivot.rotation.x += 0.1 * mouse_delta.y;
 				// fall back to 0 when mouse_delta = (0, 0)
 				camera_inner_pivot.rotation.z = 0.95 * camera_inner_pivot.rotation.z
 											  + 0.1 * mouse_delta.x;
 
-				// helices animation
+/* ---------------------------------------------------------- helices animation */
 				// compute cumulative mean, then interpolaate so that the helices won't look
 				// jerky at low speeds
 				samples_sum.sub(samples[samples_curr]);
@@ -610,19 +638,19 @@
 
 				// THETA <- (a * THETA + (1-a) * (THETA_0 + THETA_DELTA);
 				var h_a = 0.3;
-				var theta_L = movables.helix_L.rotation;
-				var theta_R = movables.helix_R.rotation;
-				var theta_0 = -movables.drone.rotation.z;
-				var theta_delta_L = Math.atan(20 * ( samples_lerp.x + samples_lerp.y)) * 2/3; // < PI/3
-				var theta_delta_R = Math.atan(20 * (-samples_lerp.x + samples_lerp.y)) * 2/3; // < PI/3
+				var theta_L = objects.helix_L.rotation;
+				var theta_R = objects.helix_R.rotation;
+				var theta_0 = -objects.drone.rotation.z;
+				var theta_D_L = Math.atan(20 * ( samples_lerp.x + samples_lerp.y/4)) * 2/3; // < PI/3
+				var theta_D_R = Math.atan(20 * (-samples_lerp.x + samples_lerp.y/4)) * 2/3; // < PI/3
 
-				theta_L.z = h_a * theta_L.z + (1 - h_a) * (theta_0 + theta_delta_L);
-				theta_R.z = h_a * theta_R.z + (1 - h_a) * (theta_0 + theta_delta_R);				
+				theta_L.z = h_a * theta_L.z + (1 - h_a) * (theta_0 + theta_D_L);
+				theta_R.z = h_a * theta_R.z + (1 - h_a) * (theta_0 + theta_D_R);				
 
 				// this ensures exponential falloff when mouse_delta would be (0, 0) (mouse up)
 				mouse_delta.multiplyScalar(0.9);
 
-				// eye animation
+/* ---------------------------------------------------------- eye animation */
 				var quat_1 = new THREE.Quaternion();
 				var quat_2 = new THREE.Quaternion();
 				
@@ -658,7 +686,7 @@
 					quat_2.copy(quat_curr_2);
 				}
 				
-				movables.eyeball.quaternion.multiplyQuaternions(quat_1, quat_2);
+				objects.eyeball.quaternion.multiplyQuaternions(quat_1, quat_2);
 
 				var time_curr_s = time_curr / 1000;
 				materials[4].uniforms.time.value = time_curr_s - Math.floor(time_curr_s);

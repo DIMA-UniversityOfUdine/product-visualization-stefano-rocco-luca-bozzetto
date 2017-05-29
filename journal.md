@@ -106,3 +106,7 @@ I've worked a bit more on the animations, which are now more fluid/realistic, ev
 Tomorrow will be devoted to one last diffuse map variant, which shouldn't take more than a few hours to build, a spotlight for the drone's torch and some other minor refinements, given I'll have the time, otherwise the project looks pretty much complete anyways and the requirements are met.
 
 Actually I think I'll be working on the details of the roughness and specular maps first, and then create a third diffuse map later.
+
+## 05.29
+
+I've adjusted/corrected shader, textures and lights; **L** will fix the menu. Eventually I opted to neglect the third variant of the diffuse map.
