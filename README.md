@@ -1,3 +1,58 @@
+# Summary
+
+This project is about a simulation of a web configurator that is composed of two main elements: a canvas drawn with the help of `Three.js`, which shows an interactive 3D model of a fictional military drone, and a basic html menu that allows to change its material. The configurator has been built in such a way that it could be easily made suitable for its deployment on a real e-commerce website.
+
+The project's code is entirely contained in the `index.html` and `Menu.css` files, made exception for the external libraries which can be found under `lib/`. The project also makes use of some textures for the shader of the drone to be fed with.
+
+# Results
+
+The results of our team's work:
+
+![Result 1](images/result_1.png)
+
+![Result 2](images/result_2.png)
+
+As the images demonstrate, the drone can be rotated in the 3D space by dragging the mouse on the canvas, and its materials can be switched by accessing the underlying menu.
+
+# Process
+
+The making process went through many steps that can be summed up in the following way:
+
+- Planning: the first week and a half was dedicated to a review of some of the last lessions of the course and to a brainstorming and concept phase, during the latter of which our team outlined how the drone would roughly look like once modeled and ready to be rendered.
+
+- Modeling: modeling of the drone, which took a good portion of the following two weeks. The process involved 1) building a low-poly version of the drone, 2) its high-poly version and 3) UV-unwrapping, so that the details of the latter could be mapped onto the former.
+
+- Texturing: baking of normal, ambient occlusion and diffuse, specular and roughness maps. Here is where our team encountered most of their difficulties and forced them to make use of the extended deadline.
+
+- Coding: the last and most varied phase, which lasted until right before the official end of the project and comprised writing the code for the shaders and the animations and for the menu, detailing the textures, and setting up the lights and the environment maps of the 3D scene into which the drone is immersed.
+
+The shader equations our team used are those studied during the lessons.
+
+Tools used:
+
+- `Blender`, `Maya`: modeling, baking, texturing, preparation of the environment map
+- `xNormal`: baking of parts of the normal and ambient occlusion maps
+- `ModifiedCubeMapGen`: computation of the irradiance map
+- `Photoshop`: drawing of the concept schemes, texturing, painting, detailing
+- `ShaderFrog`: testing of some parts of the shaders
+- Some basic IDEs and the `Chrome` browser for writing and testing code
+
+All the assets used in the project except the environment map, which is drawn from a `Three.js` example and under CC licence, were made by our team. The font used for the menu belongs to the DejaVu font family, which is under free license.
+
+
+# Further work
+
+Possible improvements of the project would have been the following:
+
+- A cone-light for the torch, associated with a two-pass shader that would exhibit a lens flare and a dedicated button in the menu
+- An extended, more refined verison of the menu, which e.g. would have animatable icons and allow the user to reset the camera
+- A more elaborate light setting or a lighting map
+- Some other neat-looking visual effects
+- Some sounds of the drone
+
+
+-----------------------------------------------------------------------------------------------------------------
+
 # ProductVisualization
 
 ![Image from Ford Configurator, developed in three.js](images/ford-configurator.jpg)
