@@ -115,5 +115,5 @@ I've adjusted/corrected shader, textures and lights; **L** will fix the menu. Ev
 
 ## 05.30
 
-Our professor announced the deadline has been posponed by another week, so I'm taking some time to polish the project and see if I can implement some of the other ideas I had in mind.
+Our professor announced the deadline has been posponed by another week, so we're taking some time to polish the project and see if we can implement some of the other ideas we had in mind.
 I happened to figure out the cause of the artifacts of the normal map: the problem was that there were too few polygons that were bound to host the details of a smoothly curved surface, which caused xNormal to bake incorrectly. I added a few polygons in that area and baked the normal maps again, and now they're behaving correctly.
