@@ -46,6 +46,7 @@ Possible improvements of the project would have been the following:
 
 - A cone-light for the torch, associated with a two-pass shader that would exhibit a lens flare and a dedicated button in the menu
 - An extended, more refined verison of the menu, which e.g. would have animatable icons and allow the user to reset the camera
+- A third version of the diffuse map
 - A more elaborate light setting or a lighting map
 - Some other neat-looking visual effects
 - Some sounds of the drone

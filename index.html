@@ -244,7 +244,7 @@
 				float t1 = fract(time * 2.0);	// time 1
 				float yscale = 0.8;				// scale y
 				float a = abs(t1 - (vUv.y * yscale - (yscale - 1.0)/2.0));	// get line
-				if (a < 0.05) {					// narrow line
+				if (a < 0.02) {					// narrow line
 					brightness = sqrt(sqrt(a));	// (multiply)
 				}
 
@@ -308,7 +308,6 @@
 			var diffuseMaps = [
 				loadTexture(path + "Drone_diffuse_1_s_1.png"),
 				loadTexture(path + "Drone_diffuse_1_s_2.png"),
-				loadTexture(path + "Drone_diffuse_1_s_3.png"),
 				loadTexture(path + "Drone_diffuse_2_s.png")
 				];
 			var uniform_diffuseMap = { type: "t", value: diffuseMaps[0] };
@@ -391,7 +390,7 @@
 			}
 			
 			for (var i = 2; i < 4; i++) {
-				materials[i].uniforms.diffuseMap = { type: "t", value: diffuseMaps[3] };
+				materials[i].uniforms.diffuseMap = { type: "t", value: diffuseMaps[2] };
 				materials[i].uniforms.specularMap = { type: "t", value: specularMaps[1] };
 				materials[i].uniforms.roughnessMap = { type: "t", value: roughnessMaps[1] };
 				materials[i].uniforms.normalMap = { type: "t", value: normalMaps[1] };
@@ -641,8 +640,8 @@
 				var theta_L = objects.helix_L.rotation;
 				var theta_R = objects.helix_R.rotation;
 				var theta_0 = -objects.drone.rotation.z;
-				var theta_D_L = Math.atan(20 * ( samples_lerp.x + samples_lerp.y/4)) * 2/3; // < PI/3
-				var theta_D_R = Math.atan(20 * (-samples_lerp.x + samples_lerp.y/4)) * 2/3; // < PI/3
+				var theta_D_L = Math.atan(22 * ( samples_lerp.x + samples_lerp.y/4)) * 2/3; // < PI/3
+				var theta_D_R = Math.atan(22 * (-samples_lerp.x + samples_lerp.y/4)) * 2/3; // < PI/3
 
 				theta_L.z = h_a * theta_L.z + (1 - h_a) * (theta_0 + theta_D_L);
 				theta_R.z = h_a * theta_R.z + (1 - h_a) * (theta_0 + theta_D_R);				
