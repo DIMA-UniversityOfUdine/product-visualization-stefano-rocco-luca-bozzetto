@@ -423,9 +423,10 @@
 			var mouse_delta = new THREE.Vector2(),
 				mouse_delta_mean = new THREE.Vector2();
 
-			var samples_N = 10;
+			var samples_MAX = 15, samples_MIN = 5;
+			var samples_n = samples_MAX;
 			var samples = [];
-			for (var i = 0; i < samples_N; i++) {
+			for (var i = 0; i < samples_MAX; i++) {
 				samples[i] = new THREE.Vector2();
 			}
 			var samples_curr = 0;
@@ -573,6 +574,10 @@
 				update(objects);
 			}
 
+			function mod(n, m) { return ((n % m) + m) % m; }
+
+			function sign(x) { return x >= 0 ? 1 : -1; }
+
 			function update(objects) {
 
 				requestAnimationFrame(function() {
@@ -621,17 +626,30 @@
 											  + 0.1 * mouse_delta.x;
 
 /* ---------------------------------------------------------- helices animation */
-				// compute cumulative mean, then interpolaate so that the helices won't look
+				// compute cumulative mean, then interpolate so that the helices won't look
 				// jerky at low speeds
-				samples_sum.sub(samples[samples_curr]);
+				var samples_last = mod(samples_curr - samples_n, samples_MAX);
+
+				// reduce samples number if a drop in velocity is detected
+				if (Math.abs(mouse_delta.x) < Math.abs(samples_lerp.x) && 
+					Math.abs(mouse_delta.y) < Math.abs(samples_lerp.y)) {
+					if (samples_n > samples_MIN) {
+						samples_sum.sub(samples[samples_last]);
+						samples_last = mod(samples_last + 1, samples_MAX);
+						samples_n--;
+					}
+				} else if (samples_n < samples_MAX) {
+					samples_last = mod(samples_last - 1, samples_MAX);
+					samples[samples_last] = new THREE.Vector2();
+					samples_n++;
+				}
+
+				samples_sum.sub(samples[samples_last]);
 				samples[samples_curr].copy(mouse_delta);
 				samples_sum.add(samples[samples_curr]);
-				samples_curr++;
-				if (samples_curr == samples_N) {
-					samples_curr = 0;
-				}
+				samples_curr = mod(samples_curr + 1, samples_MAX);
 				var samples_mean = (new THREE.Vector2()).copy(samples_sum);
-				samples_mean.multiply(new THREE.Vector2(1/samples_N, 1/samples_N));
+				samples_mean.multiplyScalar(1/samples_n);
 
 				var s_a = 0.8;
 				samples_lerp.multiplyScalar(s_a);
@@ -643,8 +661,15 @@
 				var theta_L = objects.helix_L.rotation;
 				var theta_R = objects.helix_R.rotation;
 				var theta_0 = -objects.drone.rotation.z;
-				var theta_D_L = Math.atan(22 * ( samples_lerp.x + samples_lerp.y/4)) * 2/3; // < PI/3
-				var theta_D_R = Math.atan(22 * (-samples_lerp.x + samples_lerp.y/4)) * 2/3; // < PI/3
+
+				var D_L =  samples_lerp.x + samples_lerp.y/4;
+				var D_R = -samples_lerp.x + samples_lerp.y/4;
+				// make small movements have a higher impact on the rotation
+				D_L = Math.pow(Math.abs(D_L), 0.9) * sign(D_L);
+				D_R = Math.pow(Math.abs(D_R), 0.9) * sign(D_R);
+
+				var theta_D_L = Math.atan(20 * (D_L)) * 2/3; // < PI/3
+				var theta_D_R = Math.atan(20 * (D_R)) * 2/3; // < PI/3
 
 				theta_L.z = h_a * theta_L.z + (1 - h_a) * (theta_0 + theta_D_L);
 				theta_R.z = h_a * theta_R.z + (1 - h_a) * (theta_0 + theta_D_R);				
