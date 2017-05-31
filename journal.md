@@ -119,3 +119,7 @@ Our professor announced the deadline has been posponed by another week, so we're
 I happened to figure out the cause of the artifacts of the normal map: the problem was that there were too few polygons that were hosting the details of a smoothly curved surface, which caused xNormal to bake incorrectly. I added a few polygons in that area and baked the normal maps again, and now they're behaving correctly.
 
 By testing the shader components separately it looks like the function `GGXRoughnessToBlinnExponent` already embodies the Fresnel term, which on the other hand is obviously absent in the computation of the irradiance component--which should complement the reflectance one, so in the end I added such term manually.
+
+## 05.31
+
+I've just fixed a few things; we eventually decided we'll leave the project as it is and concentrate on the final exam of the course instead.
