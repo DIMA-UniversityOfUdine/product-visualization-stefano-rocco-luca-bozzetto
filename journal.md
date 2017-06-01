@@ -118,7 +118,7 @@ I've adjusted/corrected shader, textures and lights; **L** will fix the menu. Ev
 Our professor announced the deadline has been posponed by another week, so we're taking some time to polish the project and see if we can implement some of the other ideas we had in mind.
 I happened to figure out the cause of the artifacts of the normal map: the problem was that there were too few polygons that were hosting the details of a smoothly curved surface, which caused xNormal to bake incorrectly. I added a few polygons in that area and baked the normal maps again, and now they're behaving correctly.
 
-By testing the shader components separately it looks like the function `GGXRoughnessToBlinnExponent` already embodies the Fresnel term, which on the other hand is obviously absent in the computation of the irradiance component--which should complement the reflectance one, so in the end I added such term manually.
+By testing the shader components separately it looks like the function `BRDF_Specular_GGX_Environment` already embodies the Fresnel term, which on the other hand is obviously absent in the computation of the irradiance component--which should complement the reflectance one, so in the end I added such term manually.
 
 ## 05.31
 

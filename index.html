@@ -602,6 +602,7 @@
 
 				if (mouseDown) {
 					mouse_delta.subVectors(mouse_curr, mouse_old);
+					mouse_delta.multiplyScalar(window.devicePixelRatio);
 					mouse_delta.multiplyScalar(Math.PI/1000); // 1 px == PI/1000 rad
 					mouse_old.copy(mouse_curr);
 				}
@@ -631,8 +632,8 @@
 				var samples_last = mod(samples_curr - samples_n, samples_MAX);
 
 				// reduce samples number if a drop in velocity is detected
-				if (Math.abs(mouse_delta.x) < Math.abs(samples_lerp.x) && 
-					Math.abs(mouse_delta.y) < Math.abs(samples_lerp.y)) {
+				if (Math.abs(mouse_delta.x) < Math.abs(samples_lerp.x) / 2 && 
+					Math.abs(mouse_delta.y) < Math.abs(samples_lerp.y) / 2) {
 					if (samples_n > samples_MIN) {
 						samples_sum.sub(samples[samples_last]);
 						samples_last = mod(samples_last + 1, samples_MAX);
