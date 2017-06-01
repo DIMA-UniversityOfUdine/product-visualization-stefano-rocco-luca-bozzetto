@@ -602,7 +602,6 @@
 
 				if (mouseDown) {
 					mouse_delta.subVectors(mouse_curr, mouse_old);
-					mouse_delta.multiplyScalar(window.devicePixelRatio);
 					mouse_delta.multiplyScalar(Math.PI/1000); // 1 px == PI/1000 rad
 					mouse_old.copy(mouse_curr);
 				}
