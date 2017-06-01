@@ -122,4 +122,10 @@ By testing the shader components separately it looks like the function `BRDF_Spe
 
 ## 05.31
 
-I've just fixed a few things; we eventually decided we'll leave the project as it is and concentrate on the final exam of the course instead.
+I've just fixed a few things.
+
+## 05.32
+**L:** I've added max and min zoom for the camera.
+
+## 05.33
+We eventually decided we'll leave the project as it is and concentrate on the final exam of the course instead.
