@@ -437,6 +437,11 @@
 			var quat_old_1 = new THREE.Quaternion(), quat_curr_1 = new THREE.Quaternion();
 			var quat_old_2 = new THREE.Quaternion(), quat_curr_2 = new THREE.Quaternion();
 			var eye_time_delta_1 = 0, eye_time_delta_2 = 0;
+			
+			var pos1 = -30;
+            		var max = -15;
+            		var min = -40;
+            		var objects = {};
 
 /* ---------------------------------------------------------- obj loading */
 			var loader = new THREE.OBJLoader();
@@ -522,6 +527,14 @@
 				});
 			}
 
+			function mousewheel(event) {
+                		if (pos1 + event.wheelDeltaY * 0.005 < max && pos1 > min - event.wheelDeltaY * 0.005) {
+                    			pos1 = pos1 + event.wheelDeltaY * 0.005;
+                    			camera.position.set(0, 4, pos1);
+                		}
+                		camera.lookAt(objects.drone.position);
+            		}
+			
 			function onResize() {
 
 				renderer.setSize(window.innerWidth, window.innerHeight);
@@ -565,6 +578,7 @@
 				renderer.domElement.addEventListener('mousedown', onMouseDown, false);
 				document.addEventListener('mousemove', onMouseMove, false);
 				document.addEventListener('mouseup', onMouseUp, false);
+				document.addEventListener('mousewheel', mousewheel, false);
 
 				for (var i = 0; i < materials.length; i++) {
 					materials[i].needsUpdate = true;
