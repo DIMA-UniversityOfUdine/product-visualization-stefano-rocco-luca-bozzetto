@@ -638,6 +638,8 @@
 											  + 0.1 * mouse_delta.x;
 
 /* ---------------------------------------------------------- helices animation */
+				// could've used tweening, but it started as a rather simple animation
+
 				// compute cumulative mean, then interpolate so that the helices won't look
 				// jerky at low speeds
 				var samples_last = mod(samples_curr - samples_n, samples_MAX);
