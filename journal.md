@@ -3,7 +3,7 @@
 
 ## 04.19
 
-I and **L** are planning to build our very own model for the project. We still don't know the subject, but we're going to figure out these days while I catch up with the lessons.
+I and **L** are planning to build our very own model for the project. We still don't know the subject, but we're going to figure out these days while I catch up with the lectures.
 
 **L** has a fairly good understanding of modeling and uv mapping, and of web programming too, so we decided he'll build the model and write the menu, I'll probably take care of the shaders and materials.
 
@@ -35,7 +35,7 @@ As one can see, I decided to model the drone, starting with its low-poly version
 
 ## 05.07
 
-The low-poly version of the model is nearly done, I'm prepping for the unwrap phase. The fact that I still don't know how to deal with texture phase in an efficient way is bothering me.
+The low-poly version of the model is nearly done, I'm prepping for the unwrap phase. The fact that I still don't know how to deal with the texture phase in an efficient way is bothering me.
 
 ## 05.09
 
@@ -91,7 +91,7 @@ Also the two helices of the drone are mirrored so they utilize the same texture 
 
 On the other hand the colour maps are turning out good; the UV seams are getting in the way as predicted, but honestly I don't have much time to pay attention to them, and also I'm trying to keep the paint confined to a single UV island every time, so the problem doesn't occurr as much as it would otherwise and the results are still pretty decent.
 
-Also, I found a neat `Blender` project online that is conveniently set up to output the render of its scene into a cubemap, which allowed me to convert the latlong map of one of the examples we saw during the lessons into its cubemap form, and even compute its mipmap levels up to the smallest one to use for simulating the reflections, without encountering the problem of the seams at the edges of the cube.
+Also, I found a neat `Blender` project online that is conveniently set up to output the render of its scene into a cubemap, which allowed me to convert the latlong map of one of the examples we saw during the course into its cubemap form, and even compute its mipmap levels up to the smallest one to use for simulating reflections, without encountering the problem of the seams at the edges of the cube.
 The very same cubemap-transformed environment map was used to feed ATI's (`Modified` by S. Lagarde) `CubeMapGen` for calculating the corresponding irradiance map using the spherical harmonics method (which is admittedly dark in our case but still makes a difference). I'm considering bumping up its saturation a bit, for artistic purposes.
 
 ## 05.26
@@ -104,7 +104,7 @@ Writing even a simple `html/css` menu is harder than I thought--honestly much ha
 
 ## 05.28
 
-I've worked a bit more on the animations, which are now more fluid/realistic, even if not by much. Also I had fun writing a little shader for the eye of the drone, for which I used `ShaderFrog` to test as suggested during the course.
+I've worked a bit more on the animations, which are now more fluid/realistic, even if not by much. Also I had fun writing a little shader for the eye of the drone, for testing which I used `ShaderFrog` as suggested during the course.
 Tomorrow will be devoted to one last diffuse map variant, which shouldn't take more than a few hours to build, a spotlight for the drone's torch and some other minor refinements, given I'll have the time, otherwise the project looks pretty much complete anyways and the requirements are met.
 
 Actually I think I'll be working on the details of the roughness and specular maps first, and then create a third diffuse map later.
@@ -124,8 +124,7 @@ By testing the shader components separately it looks like the function `BRDF_Spe
 
 I've just fixed a few things.
 
-## 05.32
 **L:** I've added max and min zoom for the camera.
 
-## 05.33
+## 06.01
 We eventually decided we'll leave the project as it is and concentrate on the final exam of the course instead.
