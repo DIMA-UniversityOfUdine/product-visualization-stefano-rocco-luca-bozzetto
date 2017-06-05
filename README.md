@@ -2,7 +2,7 @@
 
 This project is about a simulation of a web configurator that is composed of two main elements: a canvas drawn with the help of `Three.js`, which shows an interactive 3D model of a fictional military drone, and a basic html menu that allows to change its material. The configurator has been built in such a way that it could be easily made suitable for its deployment on a real e-commerce website.
 
-The project's code is entirely contained in the `index.html` and `Menu.css` files, made exception for the external libraries which can be found under `lib/`. The project also makes use of some textures for the shader of the drone to be fed with.
+The project's code is entirely contained in the `index.html` and `Menu.css` files, exception made for the external libraries which can be found under `lib/`. The project also makes use of some textures for the shader of the drone to be fed with.
 
 # Results
 
@@ -18,7 +18,7 @@ As the images demonstrate, the drone can be rotated in the 3D space by dragging 
 
 The making process went through many steps that can be summed up in the following way:
 
-- Planning: the first week and a half was dedicated to a review of some of the last lessions of the course and to a brainstorming and concept phase, during the latter of which our team outlined how the drone would roughly look like once modeled and ready to be rendered.
+- Planning: the first week and a half was dedicated to a review of some of the last lectures of the course and to a brainstorming and concept phase, during the latter of which our team outlined how the drone would roughly look like once modeled and ready to be rendered.
 
 - Modeling: modeling of the drone, which took a good portion of the following two weeks. The process involved 1) building a low-poly version of the drone, 2) its high-poly version and 3) UV-unwrapping, so that the details of the latter could be mapped onto the former.
 
@@ -26,7 +26,7 @@ The making process went through many steps that can be summed up in the followin
 
 - Coding: the last and most varied phase, which lasted until right before the official end of the project and comprised writing the code for the shaders and the animations and for the menu, detailing the textures, and setting up the lights and the environment maps of the 3D scene into which the drone is immersed.
 
-The shader equations our team used are those studied during the lessons.
+The shader equations our team used are those studied during the course.
 
 Tools used:
 
@@ -35,9 +35,9 @@ Tools used:
 - `ModifiedCubeMapGen`: computation of the irradiance map
 - `Photoshop`: drawing of the concept schemes, texturing, painting, detailing
 - `ShaderFrog`: testing of some parts of the shaders
-- Some basic IDEs and the `Chrome` browser for writing and testing code
+- Some basic IDEs and the `Chrome` browser resp. for writing and testing code
 
-All the assets used in the project except the environment map, which is drawn from a `Three.js` example and under CC licence, were made by our team. The font used for the menu belongs to the DejaVu font family, which is under free license.
+All the assets used in the project except the environment map, which is drawn from a `Three.js` example and is under CC licence, were made by our team. The font used for the menu belongs to the DejaVu font family, which is under free license.
 
 
 # Further work
